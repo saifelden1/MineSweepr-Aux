@@ -2,8 +2,9 @@
  * @file detector_interface.h
  * @brief Common Hardware Interface for Inductive Pulse Induction Metal Detector.
  *
- * Provides a pure abstract interface for coil excitation pulsing,
- * EXTI edge timestamp capture, ground baseline calibration, and reading telemetry.
+ * Provides an abstract interface for coil excitation pulsing,
+ * analog decay tail sampling via ADC1, ground baseline calibration,
+ * and reading telemetry.
  */
 
 #ifndef DETECTOR_INTERFACE_H
@@ -17,19 +18,22 @@ extern "C" {
 #endif
 
 typedef struct {
-    float signal_intensity; /**< Normalized coil response intensity [0.0f .. 1.0f] */
-    uint32_t decay_time_us; /**< Measured flyback decay duration in microseconds */
-    bool target_detected;   /**< True if threshold exceeded (metal target present) */
-    uint32_t sample_id;     /**< Monotonically increasing sample sequence counter */
-    uint32_t timestamp_ms;  /**< Timestamp of sample acquisition */
+    float    signal_intensity; /**< Normalized coil response intensity [0.0f .. 1.0f] */
+    uint16_t adc_raw_sample;   /**< Measured oversampled ADC1 value (0..4095) */
+    uint16_t adc_baseline;     /**< Running EMA ground baseline ADC value */
+    uint16_t delta_v;          /**< Raw sample minus baseline (clamped >= 0) */
+    bool     target_detected;  /**< True if threshold exceeded (metal target present) */
+    uint32_t sample_id;        /**< Monotonically increasing sample sequence counter */
+    uint32_t timestamp_ms;     /**< Timestamp of sample acquisition */
 } detector_reading_t;
 
 typedef struct detector_interface {
     bool (*init)(void);
-    bool (*trigger_pulse)(void);
-    void (*on_exti_edge_captured)(uint32_t tick_us);
+    bool (*trigger_pulse_and_sample)(void);
     bool (*get_latest_reading)(detector_reading_t *out_reading);
     void (*calibrate_ground_baseline)(uint16_t samples);
+    void (*set_threshold)(uint16_t thresh_adc);
+    void (*set_scale)(uint16_t scale_adc);
 } detector_interface_t;
 
 #ifdef __cplusplus

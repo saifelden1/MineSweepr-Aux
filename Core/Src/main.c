@@ -9,15 +9,25 @@
 #include "main.h"
 #include "cmsis_os.h"
 
+/* Config & BSP Drivers */
+#include "auxiliary_pin_config.h"
+#include "status_beacon_driver.h"
+#include "servo_gripper_driver.h"
+#include "pi_detector_driver.h"
+
 /* Interfaces */
 #include "gripper_interface.h"
 #include "detector_interface.h"
 
-/* Concrete BSP Drivers */
-#include "servo_gripper_driver.h"
-#include "pi_detector_driver.h"
+/* Application Tasks & Middleware */
+#include "task_detector.h"
+#include "task_gripper.h"
+#include "task_microros.h"
+#include "microros_client.h"
+#include "microros_transport.h"
 
 /* Peripheral Handles --------------------------------------------------------*/
+ADC_HandleTypeDef hadc1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim4;
 UART_HandleTypeDef huart1;
@@ -28,22 +38,22 @@ DMA_HandleTypeDef hdma_usart1_rx;
 osThreadId_t Task_DetectorHandle;
 const osThreadAttr_t Task_Detector_attributes = {
   .name = "Task_Detector",
-  .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityHigh,
+  .stack_size = 512 * 4,
+  .priority = (osPriority_t) osPriorityAboveNormal,
 };
 
 osThreadId_t Task_GripperHandle;
 const osThreadAttr_t Task_Gripper_attributes = {
   .name = "Task_Gripper",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityAboveNormal,
 };
 
 osThreadId_t Task_MicroROSHandle;
 const osThreadAttr_t Task_MicroROS_attributes = {
   .name = "Task_MicroROS",
-  .stack_size = 512 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal,
+  .stack_size = 1024 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -51,6 +61,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM4_Init(void);
+static void MX_ADC1_Init(void);
 static void MX_USART1_UART_Init(void);
 
 void StartTaskDetector(void *argument);
@@ -73,11 +84,22 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM2_Init();
   MX_TIM4_Init();
+  MX_ADC1_Init();
   MX_USART1_UART_Init();
 
   /* Initialize concrete BSP drivers */
+  Status_Beacon_Init();
   Servo_Gripper_Init();
   PI_Detector_Init();
+
+  /* Initialize micro-ROS transport and client */
+  MicroROS_Transport_Init(&huart1, &hdma_usart1_rx, &hdma_usart1_tx);
+  MicroROS_Client_Init();
+
+  /* Initialize application tasks */
+  Task_Detector_Init();
+  Task_Gripper_Init();
+  Task_MicroROS_Init();
 
   /* Init scheduler */
   osKernelInitialize();
@@ -152,16 +174,16 @@ static void MX_TIM2_Init(void)
 }
 
 /**
-  * @brief TIM4 Initialization Function (50 Hz PWM on PB6 for Servo Gripper, ARR=19999, PSC=95)
+  * @brief TIM4 Initialization Function (50 Hz PWM on PB6/PB7 for Servo Gripper, ARR=19999, PSC=95)
   */
 static void MX_TIM4_Init(void)
 {
   TIM_OC_InitTypeDef sConfigOC = {0};
 
-  htim4.Instance = TIM4;
-  htim4.Init.Prescaler = 95;  /* 1 MHz tick */
+  htim4.Instance = AUX_GRIPPER_TIMER_INSTANCE;
+  htim4.Init.Prescaler = AUX_GRIPPER_PWM_PRESCALER;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 19999;  /* 20,000 ticks = 20 ms -> 50 Hz */
+  htim4.Init.Period = AUX_GRIPPER_PWM_PERIOD_TICKS;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_PWM_Init(&htim4) != HAL_OK)
@@ -170,10 +192,47 @@ static void MX_TIM4_Init(void)
   }
 
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 1500;     /* 1.5 ms neutral position */
+  sConfigOC.Pulse = AUX_GRIPPER_PULSE_NEUTRAL_US;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, AUX_GRIPPER_PWM1_CHANNEL) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, AUX_GRIPPER_PWM2_CHANNEL) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
+/**
+  * @brief ADC1 Initialization Function (Pulse Induction Decay Tail on PA1)
+  */
+static void MX_ADC1_Init(void)
+{
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  hadc1.Instance = AUX_DETECTOR_ADC_INSTANCE;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
+  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc1.Init.ScanConvMode = DISABLE;
+  hadc1.Init.ContinuousConvMode = DISABLE;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.DMAContinuousRequests = DISABLE;
+  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  sConfig.Channel = AUX_DETECTOR_ADC_CHANNEL;
+  sConfig.Rank = 1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_15CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
   }
@@ -184,8 +243,8 @@ static void MX_TIM4_Init(void)
   */
 static void MX_USART1_UART_Init(void)
 {
-  huart1.Instance = USART1;
-  huart1.Init.BaudRate = 921600;
+  huart1.Instance = AUX_MICROROS_UART_INSTANCE;
+  huart1.Init.BaudRate = AUX_MICROROS_BAUDRATE;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;
@@ -206,62 +265,37 @@ static void MX_GPIO_Init(void)
   GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOC_CLK_ENABLE();
+  AUX_HEARTBEAT_CLK_ENABLE();
   __HAL_RCC_GPIOH_CLK_ENABLE();
-  __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
+  AUX_DETECTOR_ADC_CLK_ENABLE();
+  AUX_DETECTOR_PULSE_CLK_ENABLE();
 
   /* Configure PC13 (Heartbeat LED) */
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
-  GPIO_InitStruct.Pin = GPIO_PIN_13;
+  HAL_GPIO_WritePin(AUX_HEARTBEAT_PORT, AUX_HEARTBEAT_PIN, GPIO_PIN_RESET);
+  GPIO_InitStruct.Pin = AUX_HEARTBEAT_PIN;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+  HAL_GPIO_Init(AUX_HEARTBEAT_PORT, &GPIO_InitStruct);
 
   /* Configure PB0 (Metal Detector Pulse Excitation Output) */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_RESET);
-  GPIO_InitStruct.Pin = GPIO_PIN_0;
+  HAL_GPIO_WritePin(AUX_DETECTOR_PULSE_PORT, AUX_DETECTOR_PULSE_PIN, GPIO_PIN_RESET);
+  GPIO_InitStruct.Pin = AUX_DETECTOR_PULSE_PIN;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  HAL_GPIO_Init(AUX_DETECTOR_PULSE_PORT, &GPIO_InitStruct);
 
-  /* Configure PB1 (Metal Detector Comparator Echo Input with Rising Edge EXTI) */
-  GPIO_InitStruct.Pin = GPIO_PIN_1;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  /* Configure PB12 (Alert Siren) and PB13 (Alert Strobe) */
+  AUX_BEACON_BUZZER_CLK_ENABLE();
+  AUX_BEACON_STROBE_CLK_ENABLE();
+  HAL_GPIO_WritePin(AUX_BEACON_BUZZER_PORT, AUX_BEACON_BUZZER_PIN, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(AUX_BEACON_STROBE_PORT, AUX_BEACON_STROBE_PIN, GPIO_PIN_RESET);
+  GPIO_InitStruct.Pin = AUX_BEACON_BUZZER_PIN | AUX_BEACON_STROBE_PIN;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /* Enable EXTI1 IRQ in NVIC */
-  HAL_NVIC_SetPriority(EXTI1_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(EXTI1_IRQn);
-}
-
-/* Tasks Implementations -----------------------------------------------------*/
-
-void StartTaskDetector(void *argument)
-{
-  for(;;)
-  {
-    osDelay(50);
-  }
-}
-
-void StartTaskGripper(void *argument)
-{
-  for(;;)
-  {
-    osDelay(20);
-  }
-}
-
-void StartTaskMicroROS(void *argument)
-{
-  for(;;)
-  {
-    osDelay(50);
-  }
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(AUX_BEACON_BUZZER_PORT, &GPIO_InitStruct);
 }
 
 /**

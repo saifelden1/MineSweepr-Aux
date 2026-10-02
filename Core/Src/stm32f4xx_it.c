@@ -7,10 +7,13 @@
 
 #include "main.h"
 #include "stm32f4xx_it.h"
-#include "pi_detector_driver.h"
+#include "microros_transport.h"
 
 extern TIM_HandleTypeDef htim11;
 extern TIM_HandleTypeDef htim2;
+extern UART_HandleTypeDef huart1;
+extern DMA_HandleTypeDef hdma_usart1_tx;
+extern DMA_HandleTypeDef hdma_usart1_rx;
 
 /******************************************************************************/
 /*           Cortex-M4 Processor Interruption and Exception Handlers          */
@@ -67,22 +70,66 @@ void TIM1_TRG_COM_TIM11_IRQHandler(void)
   HAL_TIM_IRQHandler(&htim11);
 }
 
+
+
 /**
-  * @brief This function handles EXTI Line 1 interrupt (Pulse Induction Metal Detector echo).
+  * @brief This function handles DMA2 Stream 7 global interrupt (USART1_TX).
   */
-void EXTI1_IRQHandler(void)
+void DMA2_Stream7_IRQHandler(void)
 {
-  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_1);
+  HAL_DMA_IRQHandler(&hdma_usart1_tx);
 }
 
 /**
-  * @brief EXTI line detection callback.
-  * @param GPIO_Pin Specifies the pin connected to EXTI line
+  * @brief This function handles DMA2 Stream 2 global interrupt (USART1_RX).
   */
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+void DMA2_Stream2_IRQHandler(void)
 {
-  if (GPIO_Pin == GPIO_PIN_1)
+  HAL_DMA_IRQHandler(&hdma_usart1_rx);
+}
+
+/**
+  * @brief This function handles USART1 global interrupt.
+  */
+void USART1_IRQHandler(void)
+{
+  if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_IDLE) != RESET)
   {
-    PI_Detector_OnExtiEdgeCaptured(__HAL_TIM_GET_COUNTER(&htim2));
+    __HAL_UART_CLEAR_IDLEFLAG(&huart1);
+    MicroROS_Transport_OnUartIdle();
+  }
+  HAL_UART_IRQHandler(&huart1);
+}
+
+/**
+  * @brief Tx Transfer completed callback.
+  */
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+  if (huart->Instance == USART1)
+  {
+    MicroROS_Transport_OnTxCplt();
+  }
+}
+
+/**
+  * @brief Rx Transfer completed callback.
+  */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+  if (huart->Instance == USART1)
+  {
+    MicroROS_Transport_OnRxCplt();
+  }
+}
+
+/**
+  * @brief UART error callback.
+  */
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+  if (huart->Instance == USART1)
+  {
+    MicroROS_Transport_OnError();
   }
 }
