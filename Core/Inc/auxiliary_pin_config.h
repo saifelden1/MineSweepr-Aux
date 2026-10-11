@@ -94,37 +94,77 @@ extern "C" {
 #define AUX_GRIPPER_PULSE_MAX_US        (2000U)  /**< Upper mechanical limit */
 
 /* ========================================================================= */
-/* 3. STATUS BEACON & INDICATORS CONFIGURATION (1 BUZZER + 3 LEDS)           */
+/* 3. DEDICATED DEBUG INDICATORS CONFIGURATION (1 BUZZER + 3 LEDS + HB)      */
 /* ========================================================================= */
-/** Audible Buzzer Alarm Stage (PB12) */
+/** Audible Buzzer Stage (PB12) */
+#define DEBUG_BUZZER_PORT               GPIOB
+#define DEBUG_BUZZER_PIN                GPIO_PIN_12
+#define DEBUG_BUZZER_CLK_ENABLE()       __HAL_RCC_GPIOB_CLK_ENABLE()
+
+#define DEBUG_BUZZER_ON()               HAL_GPIO_WritePin(DEBUG_BUZZER_PORT, DEBUG_BUZZER_PIN, GPIO_PIN_SET)
+#define DEBUG_BUZZER_OFF()              HAL_GPIO_WritePin(DEBUG_BUZZER_PORT, DEBUG_BUZZER_PIN, GPIO_PIN_RESET)
+#define DEBUG_BUZZER_TOGGLE()           HAL_GPIO_TogglePin(DEBUG_BUZZER_PORT, DEBUG_BUZZER_PIN)
+
+/** Debug LED 1: Red - Error / Target Alert (PB13) */
+#define DEBUG_LED1_PORT                 GPIOB
+#define DEBUG_LED1_PIN                  GPIO_PIN_13
+#define DEBUG_LED1_CLK_ENABLE()         __HAL_RCC_GPIOB_CLK_ENABLE()
+
+#define DEBUG_LED1_ON()                 HAL_GPIO_WritePin(DEBUG_LED1_PORT, DEBUG_LED1_PIN, GPIO_PIN_SET)
+#define DEBUG_LED1_OFF()                HAL_GPIO_WritePin(DEBUG_LED1_PORT, DEBUG_LED1_PIN, GPIO_PIN_RESET)
+#define DEBUG_LED1_TOGGLE()             HAL_GPIO_TogglePin(DEBUG_LED1_PORT, DEBUG_LED1_PIN)
+
+/** Debug LED 2: Yellow - Motion / Pulse Busy (PB14) */
+#define DEBUG_LED2_PORT                 GPIOB
+#define DEBUG_LED2_PIN                  GPIO_PIN_14
+#define DEBUG_LED2_CLK_ENABLE()         __HAL_RCC_GPIOB_CLK_ENABLE()
+
+#define DEBUG_LED2_ON()                 HAL_GPIO_WritePin(DEBUG_LED2_PORT, DEBUG_LED2_PIN, GPIO_PIN_SET)
+#define DEBUG_LED2_OFF()                HAL_GPIO_WritePin(DEBUG_LED2_PORT, DEBUG_LED2_PIN, GPIO_PIN_RESET)
+#define DEBUG_LED2_TOGGLE()             HAL_GPIO_TogglePin(DEBUG_LED2_PORT, DEBUG_LED2_PIN)
+
+/** Debug LED 3: Green - ROS OK / System Ready (PB15) */
+#define DEBUG_LED3_PORT                 GPIOB
+#define DEBUG_LED3_PIN                  GPIO_PIN_15
+#define DEBUG_LED3_CLK_ENABLE()         __HAL_RCC_GPIOB_CLK_ENABLE()
+
+#define DEBUG_LED3_ON()                 HAL_GPIO_WritePin(DEBUG_LED3_PORT, DEBUG_LED3_PIN, GPIO_PIN_SET)
+#define DEBUG_LED3_OFF()                HAL_GPIO_WritePin(DEBUG_LED3_PORT, DEBUG_LED3_PIN, GPIO_PIN_RESET)
+#define DEBUG_LED3_TOGGLE()             HAL_GPIO_TogglePin(DEBUG_LED3_PORT, DEBUG_LED3_PIN)
+
+/** Diagnostic Heartbeat User LED (PC13 on BlackPill - Active LOW) */
+#define DEBUG_HEARTBEAT_PORT            GPIOC
+#define DEBUG_HEARTBEAT_PIN             GPIO_PIN_13
+#define DEBUG_HEARTBEAT_CLK_ENABLE()    __HAL_RCC_GPIOC_CLK_ENABLE()
+
+#define DEBUG_HEARTBEAT_ON()            HAL_GPIO_WritePin(DEBUG_HEARTBEAT_PORT, DEBUG_HEARTBEAT_PIN, GPIO_PIN_RESET)
+#define DEBUG_HEARTBEAT_OFF()           HAL_GPIO_WritePin(DEBUG_HEARTBEAT_PORT, DEBUG_HEARTBEAT_PIN, GPIO_PIN_SET)
+#define DEBUG_HEARTBEAT_TOGGLE()        HAL_GPIO_TogglePin(DEBUG_HEARTBEAT_PORT, DEBUG_HEARTBEAT_PIN)
+
+/* ========================================================================= */
+/* 4. BACKWARDS-COMPATIBILITY ALIASES (STATUS BEACON & LEGACY TEST HARNESS)  */
+/* ========================================================================= */
 #define AUX_BEACON_BUZZER_PORT          GPIOB
 #define AUX_BEACON_BUZZER_PIN           GPIO_PIN_12
-#define AUX_BEACON_BUZZER_CLK_ENABLE()  __HAL_RCC_GPIOB_CLK_ENABLE()
+#define AUX_BEACON_BUZZER_CLK_ENABLE()  DEBUG_BUZZER_CLK_ENABLE()
 
-/** LED 1: Mine Detection Alert / Strobe (PB13, Red) */
 #define AUX_LED1_PORT                   GPIOB
 #define AUX_LED1_PIN                    GPIO_PIN_13
 #define AUX_BEACON_STROBE_PORT          GPIOB
 #define AUX_BEACON_STROBE_PIN           GPIO_PIN_13
-#define AUX_BEACON_STROBE_CLK_ENABLE()  __HAL_RCC_GPIOB_CLK_ENABLE()
+#define AUX_BEACON_STROBE_CLK_ENABLE()  DEBUG_LED1_CLK_ENABLE()
 
-/** LED 2: Gripper Actuation / Busy Indicator (PB14, Yellow) */
 #define AUX_LED2_PORT                   GPIOB
 #define AUX_LED2_PIN                    GPIO_PIN_14
-#define AUX_LED2_CLK_ENABLE()           __HAL_RCC_GPIOB_CLK_ENABLE()
+#define AUX_LED2_CLK_ENABLE()           DEBUG_LED2_CLK_ENABLE()
 
-/** LED 3: System Ready & ROS Connected Indicator (PB15, Green) */
 #define AUX_LED3_PORT                   GPIOB
 #define AUX_LED3_PIN                    GPIO_PIN_15
-#define AUX_LED3_CLK_ENABLE()           __HAL_RCC_GPIOB_CLK_ENABLE()
+#define AUX_LED3_CLK_ENABLE()           DEBUG_LED3_CLK_ENABLE()
 
-/* ========================================================================= */
-/* 4. ONBOARD SYSTEM DIAGNOSTICS                                             */
-/* ========================================================================= */
-/** Active-LOW User Heartbeat LED (PC13 on BlackPill) */
 #define AUX_HEARTBEAT_PORT              GPIOC
 #define AUX_HEARTBEAT_PIN               GPIO_PIN_13
-#define AUX_HEARTBEAT_CLK_ENABLE()      __HAL_RCC_GPIOC_CLK_ENABLE()
+#define AUX_HEARTBEAT_CLK_ENABLE()      DEBUG_HEARTBEAT_CLK_ENABLE()
 
 /* ========================================================================= */
 /* 5. MICROROS SERIAL TRANSPORT CONFIGURATION                                */
