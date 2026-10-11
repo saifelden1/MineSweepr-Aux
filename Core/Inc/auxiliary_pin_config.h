@@ -45,22 +45,42 @@ extern "C" {
 #define AUX_DETECTOR_DEFAULT_THRESH_ADC (300U)  /**< ADC delta threshold to flag mine detection */
 
 /* ========================================================================= */
-/* 2. SERVO GRIPPER PWM CONFIGURATION                                        */
+/* 2. THREE-CHANNEL SERVO PWM CONFIGURATION (TIM4 CH1, CH2, CH3)            */
 /* ========================================================================= */
-/** Primary Servo PWM (Channel 1: PB6, TIM4_CH1) */
+/** Servo Timer Base */
+#define AUX_GRIPPER_TIMER_INSTANCE      TIM4
+#define AUX_GRIPPER_TIM_CLK_ENABLE()    __HAL_RCC_TIM4_CLK_ENABLE()
+
+/** Servo 1 PWM (Channel 1: PB6, TIM4_CH1) */
 #define AUX_GRIPPER_PWM1_PORT           GPIOB
 #define AUX_GRIPPER_PWM1_PIN            GPIO_PIN_6
 #define AUX_GRIPPER_PWM1_AF             GPIO_AF2_TIM4
 #define AUX_GRIPPER_PWM1_CLK_ENABLE()   __HAL_RCC_GPIOB_CLK_ENABLE()
-#define AUX_GRIPPER_TIMER_INSTANCE      TIM4
 #define AUX_GRIPPER_PWM1_CHANNEL        TIM_CHANNEL_1
-#define AUX_GRIPPER_TIM_CLK_ENABLE()    __HAL_RCC_TIM4_CLK_ENABLE()
 
-/** Secondary Servo / Wrist PWM (Channel 2: PB7, TIM4_CH2) */
+#define AUX_SERVO1_PORT                 AUX_GRIPPER_PWM1_PORT
+#define AUX_SERVO1_PIN                  AUX_GRIPPER_PWM1_PIN
+#define AUX_SERVO1_CHANNEL              AUX_GRIPPER_PWM1_CHANNEL
+
+/** Servo 2 PWM (Channel 2: PB7, TIM4_CH2) */
 #define AUX_GRIPPER_PWM2_PORT           GPIOB
 #define AUX_GRIPPER_PWM2_PIN            GPIO_PIN_7
 #define AUX_GRIPPER_PWM2_AF             GPIO_AF2_TIM4
 #define AUX_GRIPPER_PWM2_CHANNEL        TIM_CHANNEL_2
+
+#define AUX_SERVO2_PORT                 AUX_GRIPPER_PWM2_PORT
+#define AUX_SERVO2_PIN                  AUX_GRIPPER_PWM2_PIN
+#define AUX_SERVO2_CHANNEL              AUX_GRIPPER_PWM2_CHANNEL
+
+/** Servo 3 PWM (Channel 3: PB8, TIM4_CH3) */
+#define AUX_GRIPPER_PWM3_PORT           GPIOB
+#define AUX_GRIPPER_PWM3_PIN            GPIO_PIN_8
+#define AUX_GRIPPER_PWM3_AF             GPIO_AF2_TIM4
+#define AUX_GRIPPER_PWM3_CHANNEL        TIM_CHANNEL_3
+
+#define AUX_SERVO3_PORT                 AUX_GRIPPER_PWM3_PORT
+#define AUX_SERVO3_PIN                  AUX_GRIPPER_PWM3_PIN
+#define AUX_SERVO3_CHANNEL              AUX_GRIPPER_PWM3_CHANNEL
 
 /** 50 Hz RC Servo Timing (1 MHz timer clock: 1 us / tick) */
 #define AUX_GRIPPER_PWM_PERIOD_TICKS    (19999U) /**< 20 ms period (50 Hz) ARR = 19999 */
@@ -74,17 +94,29 @@ extern "C" {
 #define AUX_GRIPPER_PULSE_MAX_US        (2000U)  /**< Upper mechanical limit */
 
 /* ========================================================================= */
-/* 3. STATUS BEACON ALARM CONFIGURATION                                      */
+/* 3. STATUS BEACON & INDICATORS CONFIGURATION (1 BUZZER + 3 LEDS)           */
 /* ========================================================================= */
 /** Audible Buzzer Alarm Stage (PB12) */
 #define AUX_BEACON_BUZZER_PORT          GPIOB
 #define AUX_BEACON_BUZZER_PIN           GPIO_PIN_12
 #define AUX_BEACON_BUZZER_CLK_ENABLE()  __HAL_RCC_GPIOB_CLK_ENABLE()
 
-/** Visual Strobe LED Alarm Stage (PB13) */
+/** LED 1: Mine Detection Alert / Strobe (PB13, Red) */
+#define AUX_LED1_PORT                   GPIOB
+#define AUX_LED1_PIN                    GPIO_PIN_13
 #define AUX_BEACON_STROBE_PORT          GPIOB
 #define AUX_BEACON_STROBE_PIN           GPIO_PIN_13
 #define AUX_BEACON_STROBE_CLK_ENABLE()  __HAL_RCC_GPIOB_CLK_ENABLE()
+
+/** LED 2: Gripper Actuation / Busy Indicator (PB14, Yellow) */
+#define AUX_LED2_PORT                   GPIOB
+#define AUX_LED2_PIN                    GPIO_PIN_14
+#define AUX_LED2_CLK_ENABLE()           __HAL_RCC_GPIOB_CLK_ENABLE()
+
+/** LED 3: System Ready & ROS Connected Indicator (PB15, Green) */
+#define AUX_LED3_PORT                   GPIOB
+#define AUX_LED3_PIN                    GPIO_PIN_15
+#define AUX_LED3_CLK_ENABLE()           __HAL_RCC_GPIOB_CLK_ENABLE()
 
 /* ========================================================================= */
 /* 4. ONBOARD SYSTEM DIAGNOSTICS                                             */

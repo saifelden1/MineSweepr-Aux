@@ -9,21 +9,27 @@ extern TIM_HandleTypeDef htim4;
 
 static gripper_state_t s_current_state = GRIPPER_STATE_ERROR;
 static uint16_t s_current_pulse_us = SERVO_PULSE_NEUTRAL_US;
+static uint16_t s_channel_pulse_us[3] = {SERVO_PULSE_NEUTRAL_US, SERVO_PULSE_NEUTRAL_US, SERVO_PULSE_NEUTRAL_US};
 static bool s_initialized = false;
 
 static void set_hardware_pwm(uint16_t pulse_us)
 {
-    /* Set TIM4 Channel 1 (PB6) and Channel 2 (PB7) */
+    /* Set TIM4 Channel 1 (PB6), Channel 2 (PB7), and Channel 3 (PB8) */
     __HAL_TIM_SET_COMPARE(&htim4, AUX_GRIPPER_PWM1_CHANNEL, pulse_us);
     __HAL_TIM_SET_COMPARE(&htim4, AUX_GRIPPER_PWM2_CHANNEL, pulse_us);
+    __HAL_TIM_SET_COMPARE(&htim4, AUX_GRIPPER_PWM3_CHANNEL, pulse_us);
     s_current_pulse_us = pulse_us;
+    s_channel_pulse_us[0] = pulse_us;
+    s_channel_pulse_us[1] = pulse_us;
+    s_channel_pulse_us[2] = pulse_us;
 }
 
 bool Servo_Gripper_Init(void)
 {
-    /* Start PWM on TIM4 CH1 (PB6) and CH2 (PB7) */
+    /* Start PWM on TIM4 CH1 (PB6), CH2 (PB7), and CH3 (PB8) */
     HAL_TIM_PWM_Start(&htim4, AUX_GRIPPER_PWM1_CHANNEL);
     HAL_TIM_PWM_Start(&htim4, AUX_GRIPPER_PWM2_CHANNEL);
+    HAL_TIM_PWM_Start(&htim4, AUX_GRIPPER_PWM3_CHANNEL);
 
     /* Default to Neutral position (1500 us, State 0) */
     set_hardware_pwm(SERVO_PULSE_NEUTRAL_US);
@@ -112,6 +118,49 @@ bool Servo_Gripper_SetPulseWidthUs(uint16_t pulse_us)
     }
 
     return true;
+}
+
+bool Servo_SetChannelPulse(uint8_t servo_id, uint16_t pulse_us)
+{
+    if (!s_initialized)
+    {
+        return false;
+    }
+
+    if (pulse_us < SERVO_PULSE_MIN_US || pulse_us > SERVO_PULSE_MAX_US)
+    {
+        return false;
+    }
+
+    switch (servo_id)
+    {
+        case 1:
+            __HAL_TIM_SET_COMPARE(&htim4, AUX_GRIPPER_PWM1_CHANNEL, pulse_us);
+            s_channel_pulse_us[0] = pulse_us;
+            s_current_pulse_us = pulse_us;
+            break;
+        case 2:
+            __HAL_TIM_SET_COMPARE(&htim4, AUX_GRIPPER_PWM2_CHANNEL, pulse_us);
+            s_channel_pulse_us[1] = pulse_us;
+            break;
+        case 3:
+            __HAL_TIM_SET_COMPARE(&htim4, AUX_GRIPPER_PWM3_CHANNEL, pulse_us);
+            s_channel_pulse_us[2] = pulse_us;
+            break;
+        default:
+            return false;
+    }
+
+    return true;
+}
+
+uint16_t Servo_GetChannelPulse(uint8_t servo_id)
+{
+    if (servo_id >= 1 && servo_id <= 3)
+    {
+        return s_channel_pulse_us[servo_id - 1];
+    }
+    return 0;
 }
 
 gripper_state_t Servo_Gripper_GetState(void)

@@ -49,6 +49,8 @@ extern ADC_HandleTypeDef hadc1;
 
 /* USER CODE END EM */
 
+void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
+
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
 
@@ -57,6 +59,24 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define MD_decay_Pin GPIO_PIN_1
+#define MD_decay_GPIO_Port GPIOA
+#define MB_Pulse_Pin GPIO_PIN_0
+#define MB_Pulse_GPIO_Port GPIOB
+#define Siren_Pin GPIO_PIN_12
+#define Siren_GPIO_Port GPIOB
+#define LED1_Pin GPIO_PIN_13
+#define LED1_GPIO_Port GPIOB
+#define LED2_Pin GPIO_PIN_14
+#define LED2_GPIO_Port GPIOB
+#define LED3_Pin GPIO_PIN_15
+#define LED3_GPIO_Port GPIOB
+#define Gripper_1_Pin GPIO_PIN_6
+#define Gripper_1_GPIO_Port GPIOB
+#define Gripper_2_Pin GPIO_PIN_7
+#define Gripper_2_GPIO_Port GPIOB
+#define Gripper_3_Pin GPIO_PIN_8
+#define Gripper_3_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

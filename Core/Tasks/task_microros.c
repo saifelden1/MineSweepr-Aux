@@ -68,6 +68,9 @@ void StartTaskMicroROS(void *argument)
             bool_msg_t hb_msg;
             hb_msg.data = true;
             MicroROS_Client_PublishHeartbeat(&hb_msg);
+
+            /* Update LED 3 (System Ready & ROS Linked) */
+            Status_Beacon_SetSystemReady(MicroROS_Client_IsConnected());
         }
 
         /* 5. 10 ms base loop period */

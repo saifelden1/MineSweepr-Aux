@@ -30,25 +30,25 @@ extern "C" {
 #define SERVO_PULSE_MAX_US          AUX_GRIPPER_PULSE_MAX_US
 
 /**
- * @brief Initialize TIM4 CH1 and CH2 PWM for servo gripper control.
+ * @brief Initialize TIM4 CH1, CH2, and CH3 PWM for 3-servo payload control.
  * @return true on success.
  */
 bool Servo_Gripper_Init(void);
 
 /**
- * @brief Move gripper to Open position (1000 us pulse, State 1).
+ * @brief Move all servos to Open position (1000 us pulse, State 1).
  * @return true on success.
  */
 bool Servo_Gripper_Open(void);
 
 /**
- * @brief Move gripper to Grip/Closed position (2000 us pulse, State 2).
+ * @brief Move all servos to Grip/Closed position (2000 us pulse, State 2).
  * @return true on success.
  */
 bool Servo_Gripper_Grip(void);
 
 /**
- * @brief Move gripper to Neutral position (1500 us pulse, State 0).
+ * @brief Move all servos to Neutral position (1500 us pulse, State 0).
  * @return true on success.
  */
 bool Servo_Gripper_Neutral(void);
@@ -61,11 +61,26 @@ bool Servo_Gripper_Neutral(void);
 bool Servo_Gripper_SetState(gripper_state_t state);
 
 /**
- * @brief Set explicit pulse width in microseconds [1000 .. 2000 us].
+ * @brief Set explicit pulse width across all 3 servos in microseconds [1000 .. 2000 us].
  * @param pulse_us Pulse duration in microseconds.
  * @return true on success, false if parameter out of range.
  */
 bool Servo_Gripper_SetPulseWidthUs(uint16_t pulse_us);
+
+/**
+ * @brief Set individual servo pulse width [1000 .. 2000 us].
+ * @param servo_id Servo index: 1 (PB6/CH1), 2 (PB7/CH2), or 3 (PB8/CH3).
+ * @param pulse_us Pulse duration in microseconds.
+ * @return true on success, false if invalid id or out of range.
+ */
+bool Servo_SetChannelPulse(uint8_t servo_id, uint16_t pulse_us);
+
+/**
+ * @brief Retrieve current pulse width for specific servo [1..3].
+ * @param servo_id Servo index (1, 2, or 3).
+ * @return Pulse width in microseconds, or 0 if invalid id.
+ */
+uint16_t Servo_GetChannelPulse(uint8_t servo_id);
 
 /**
  * @brief Retrieve current gripper state enum.
@@ -74,7 +89,7 @@ bool Servo_Gripper_SetPulseWidthUs(uint16_t pulse_us);
 gripper_state_t Servo_Gripper_GetState(void);
 
 /**
- * @brief Retrieve current active pulse width in microseconds.
+ * @brief Retrieve current active pulse width in microseconds (Servo 1 reference).
  * @return Pulse width in microseconds.
  */
 uint16_t Servo_Gripper_GetPulseWidthUs(void);

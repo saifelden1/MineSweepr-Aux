@@ -24,10 +24,14 @@ typedef struct {
     bool is_active;           /**< Effective alarm state: (local || remote) */
     uint32_t strobe_timer_ms; /**< Millisecond accumulator for strobe timing */
     bool strobe_state;        /**< Current physical output state of strobe LED */
+    bool led1_state;          /**< State of LED 1 (PB13, Red / Mine Alert) */
+    bool led2_state;          /**< State of LED 2 (PB14, Yellow / Gripper Active) */
+    bool led3_state;          /**< State of LED 3 (PB15, Green / System Ready) */
+    bool buzzer_state;        /**< State of Buzzer (PB12) */
 } status_beacon_state_t;
 
 /**
- * @brief Initialize GPIO peripherals for buzzer (PB12) and strobe LED (PB13).
+ * @brief Initialize GPIO peripherals for 1 buzzer (PB12) and 3 LEDs (PB13, PB14, PB15).
  */
 void Status_Beacon_Init(void);
 
@@ -42,6 +46,31 @@ void Status_Beacon_SetMineAlert(bool detected);
  * @param active True if remote host requested alarm activation.
  */
 void Status_Beacon_SetRemoteAlert(bool active);
+
+/**
+ * @brief Control individual LED state directly.
+ * @param led_id LED number: 1 (PB13), 2 (PB14), or 3 (PB15).
+ * @param state True = ON (HIGH), False = OFF (LOW).
+ */
+void Status_Beacon_SetLed(uint8_t led_id, bool state);
+
+/**
+ * @brief Control audible buzzer directly.
+ * @param state True = Sounding, False = Silent.
+ */
+void Status_Beacon_SetBuzzer(bool state);
+
+/**
+ * @brief Convenience function to signal payload/gripper activity on LED 2 (PB14).
+ * @param active True if gripper is actively in motion or closed.
+ */
+void Status_Beacon_SetPayloadActive(bool active);
+
+/**
+ * @brief Convenience function to signal system ready & ROS connected on LED 3 (PB15).
+ * @param ready True when system is initialized and communication is verified.
+ */
+void Status_Beacon_SetSystemReady(bool ready);
 
 /**
  * @brief Periodic status beacon update handler for strobe oscillation.

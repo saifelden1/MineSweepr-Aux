@@ -5,6 +5,7 @@
 
 #include "task_gripper.h"
 #include "servo_gripper_driver.h"
+#include "status_beacon_driver.h"
 #include "cmsis_os.h"
 #include <string.h>
 
@@ -89,6 +90,9 @@ void StartTaskGripper(void *argument)
                 default:
                     break;
             }
+
+            /* Update LED 2 (Payload Activity): ON when Open or Gripped */
+            Status_Beacon_SetPayloadActive(s_cached_state == GRIPPER_STATE_CLOSED || s_cached_state == GRIPPER_STATE_OPEN);
 
             if (s_gripper_mutex != NULL)
             {
