@@ -6,7 +6,7 @@
  *   Publishers:
  *     - /metal_detector/reading (0x10, 20 Hz, std_msgs/msg/Float32)
  *     - /gripper/status         (0x11, 10 Hz, std_msgs/msg/Int8)
- *     - /stm32_heartbeat        (0x12, 1 Hz,  std_msgs/msg/Bool)
+ *     - /payload/heartbeat      (0x12, 1 Hz,  std_msgs/msg/Bool)
  *   Subscribers:
  *     - /gripper/command        (0x20, std_msgs/msg/Int8)
  *     - /beacon/alert           (0x21, std_msgs/msg/Bool)
@@ -22,6 +22,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define MICROROS_NODE_NAME           "payload_ecu_node"
+#define TOPIC_NAME_PAYLOAD_HEARTBEAT "/payload/heartbeat"
 
 typedef void (*gripper_cmd_callback_t)(int8_t cmd);
 typedef void (*beacon_alert_callback_t)(bool alert);

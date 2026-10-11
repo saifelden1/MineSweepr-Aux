@@ -23,7 +23,8 @@ extern "C" {
 /* ------------------------------------------------------------------------- */
 #define TOPIC_ID_METAL_DETECTOR_READING (0x10U) /**< Pub: /metal_detector/reading (Float32 @ 20 Hz) */
 #define TOPIC_ID_GRIPPER_STATUS         (0x11U) /**< Pub: /gripper/status (Int8 @ 10 Hz) */
-#define TOPIC_ID_STM32_HEARTBEAT        (0x12U) /**< Pub: /stm32_heartbeat (Bool @ 1 Hz) */
+#define TOPIC_ID_PAYLOAD_HEARTBEAT      (0x12U) /**< Pub: /payload/heartbeat (Bool @ 1 Hz) */
+#define TOPIC_ID_STM32_HEARTBEAT        TOPIC_ID_PAYLOAD_HEARTBEAT /**< Backwards-compatibility alias */
 #define TOPIC_ID_GRIPPER_COMMAND        (0x20U) /**< Sub: /gripper/command (Int8) */
 #define TOPIC_ID_BEACON_ALERT           (0x21U) /**< Sub: /beacon/alert (Bool) */
 

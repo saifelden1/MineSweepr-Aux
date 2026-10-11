@@ -61,7 +61,7 @@ void StartTaskMicroROS(void *argument)
             MicroROS_Client_PublishGripperStatus(&grip_msg);
         }
 
-        /* 4. Publish /stm32_heartbeat at 1 Hz (every 1000 ms) */
+        /* 4. Publish /payload/heartbeat at 1 Hz (every 1000 ms) */
         if (++heartbeat_tick_cnt >= MICROROS_HEARTBEAT_TICKS)
         {
             heartbeat_tick_cnt = 0;
