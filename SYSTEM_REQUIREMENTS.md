@@ -1,106 +1,38 @@
-# STM32_Auxiliary ECU: System Requirements & Implementation Specification
+# Auxiliary ECU requirements
 
-**Document Version:** 1.0.0  
-**Target Hardware:** STM32F411CEU6 BlackPill (ARM Cortex-M4 @ 96 MHz)  
-**RTOS:** FreeRTOS (CMSIS-RTOS v2 API) + micro-ROS Client  
-**Project Directory:** `STM32_Auxiliary/`
+Baseline: 15 October 2026. Target **STM32F103C8T6 Blue Pill, exactly one servo**. See [architecture](SYSTEM_ARCHITECTURE.md) for wiring, timing, protocol and build commands. This replaces the old F411/micro-ROS requirements.
 
----
+## Board, memory and timing
 
-## 1. Subsystem Scope & Objectives
+| ID | Requirement | Acceptance evidence |
+|---|---|---|
+| AUX-01 | Active CubeMX, CubeIDE and CMake targets use F103C8T6, Cortex-M3 soft-float, F1 HAL and the CM3 RTOS port. | Confirm chip marking and compile both toolchain paths without active F4 sources. |
+| AUX-02 | Firmware fits 64 KB flash / 20 KB SRAM, including RTOS heap, static objects and stacks. | Link map, memory report and sustained-run stack high-water marks. |
+| AUX-03 | 8 MHz HSE produces 72 MHz system clock; TIM3 supplies HAL time and SysTick supplies RTOS time. | Inspect configuration and measured task/peripheral timing. |
+| AUX-04 | Exactly one servo output exists: PB6 / TIM4 CH1, 50 Hz, 1 µs resolution. PB7/PB8 do not emit servo PWM. | Scope all three pins and inspect configuration. |
+| AUX-05 | Detector pulse, blanking and ADC acquisition use initialized timers and bounded conversion waits, including counter wrap. | Scope 70 µs pulse / 20 µs blanking, acquisition sequence and failure/rollover behavior. |
 
-STM32_Auxiliary is the dedicated payload microcontroller responsible for real-time pulse induction metal detection, surface mine gripper actuation, visual/audible detection alerts, and micro-ROS telemetry with the Raspberry Pi 5 master SBC.
+## Payload behavior
 
----
+| ID | Requirement | Acceptance evidence |
+|---|---|---|
+| AUX-06 | Commands 0/1/2 select neutral/open/close on the one servo. Default pulses are 1500/1000/2000 µs and must match measured mechanical limits. | GUI command → valid serial frame → scoped PWM → physical servo response. |
+| AUX-07 | `/gripper/status` reports commanded state; unknown/error is −1. Do not infer closed-loop position or grasp. | Check telemetry during preset and invalid/unknown states. |
+| AUX-08 | Metal readings come from actual recent ADC samples, normalize to 0–1, and are not published as fresh when acquisition fails. | Target/clear-ground observations plus missing/failed acquisition scenarios. |
+| AUX-09 | Local detection controls indicators; remote beacon alert is supported. Detection does not automatically open/close the servo. | Observe indicators and absence of unintended servo movement. |
+| AUX-10 | Invalid command values, wrong lengths or corrupt CRC frames cannot change servo/alarm state. | Framing, split-input, corruption and value-boundary checks. |
 
-## 2. Hardware Interfaces & Circuit Specification
+## Pi / ROS integration
 
-### 2.1. Pulse Induction Metal Detector Circuit
-The detection coil relies on a pulsed magnetic field; eddy currents induced in metallic objects prolong the inductive flyback decay tail.
+| ID | Requirement | Acceptance evidence |
+|---|---|---|
+| AUX-11 | Use the existing CRC-framed USART1 protocol through a Pi serial bridge, at 921600 baud with distinct stable adapter identity. | Verify actual wiring, device identity and bidirectional frames. |
+| AUX-12 | Publish detector/status/heartbeat at nominal 20/10/1 Hz and map IDs/types exactly as specified in the architecture. | Measured ROS topic rates and decoded frames under load. |
+| AUX-13 | GUI/bridge reject servo commands before valid Aux health and after its 2.5 s timeout; reconnect must not replay old commands. | Startup, unplug/replug, board reset and queued-command observations. |
+| AUX-14 | Kernel/object/task initialization is valid; ADC timing cannot hang in a HAL timeout while interrupts are masked. | Compile/source checks plus stressed runtime/failure-injection evidence. |
 
-```
-       STM32_Auxiliary (BlackPill)
-       ┌───────────────────────────────┐
-       │                               │
-       │ Pin 1: TIM / Digital Pulse Out│────► [Buffer Transistors] ────► IRF740 MOSFET Gate ────► Search Coil
-       │        (PB0 / PA8)            │                                                           │
-       │                               │                                                       (Flyback)
-       │ Pin 2: Analog Input (ADC1)    │◄─── [TL072 / TL071 Op-Amp] ◄──────────────────────────────┘
-       │        (PA1 / ADC1_IN1)       │     (Decay Tail Signal Conditioning)
-       └───────────────────────────────┘
-```
+## Scope and readiness
 
-#### Pin 1: Pulse Generator / Excitation Output
-- **Pin Assignment:** `PB0` or `PA8` (Hardware Timer PWM/One-Pulse or Fast GPIO).
-- **Driver Stage:** Interfaced to the gate of an IRF740 N-channel power MOSFET via bipolar buffer transistors (e.g. totem-pole NPN/PNP) for fast charging/discharging of the gate capacitance.
-- **Pulse Duration:** $50\,\mu\text{s} - 100\,\mu\text{s}$ excitation pulse width.
-- **Pulse Frequency:** $500\,\text{Hz} - 1000\,\text{Hz}$ repetition rate (period $1\,\text{ms} - 2\,\text{ms}$).
+No second/third servo, mobility motor control, IMU/GPS, XRCE client, object-grasp feedback or autonomous pickup is required in this ECU baseline. Its `microros_*` filenames are legacy names for custom serial code.
 
-#### Pin 2: Signal Sampler / ADC Input
-- **Pin Assignment:** `PA1` (Configured as `ADC1_IN1`, 12-bit resolution).
-- **Signal Conditioning:** Direct output from a low-noise TL072/TL071 JFET-input operational amplifier stage that clamps high-voltage flyback spikes and amplifies the microsecond decay tail.
-- **Blanking Interval:** A critical delay of $15\,\mu\text{s} - 25\,\mu\text{s}$ immediately following MOSFET gate turn-off must elapse before ADC conversion to bypass lethal flyback ringing.
-- **Sampling Window:** ADC1 samples the decay curve across $25\,\mu\text{s} - 150\,\mu\text{s}$.
-- **Signal Processing:**
-  - Running exponential average of baseline soil readings:
-    $$V_{baseline} \leftarrow \alpha V_{sample} + (1 - \alpha) V_{baseline}$$
-  - Anomaly detection metric:
-    $$\Delta V = V_{sample} - V_{baseline}$$
-  - Normalized signal $S \in [0.0, 1.0]$ published to ROS 2:
-    $$S = \text{clamp}\left(\frac{\Delta V}{V_{max\_scale}}, 0.0, 1.0\right)$$
-
-### 2.2. Gripper Mechanism Actuation
-- **Actuator Type:** 1-2 standard RC servo motors (or DC gear motor with end-stop limit switches).
-- **Control Interface:** 50 Hz PWM via TIM3/TIM2:
-  - `1000 µs`: Gripper fully OPEN.
-  - `1500 µs`: NEUTRAL / Travel position.
-  - `2000 µs`: Gripper fully CLOSED / GRIP.
-
-### 2.3. Detection Beacon & Siren
-- **Buzzer Output:** GPIO driving NPN transistor for audible frequency alarm.
-- **Strobe LED:** High-brightness LED beacon signaling landmine location to competition field judges.
-
-### 2.4. SBC Communication (micro-ROS Client)
-- **Interface:** USART2 or Native USB CDC to Raspberry Pi 5.
-- **Baud Rate:** $921600\,\text{baud}$ (UART) or 12 Mbps (USB CDC).
-
----
-
-## 3. micro-ROS Topic & Interface Specifications
-
-1. **Publisher:** `/metal_detector/reading` (`std_msgs/msg/Float32` @ 20 Hz)
-   - Transmits normalized metal detection intensity ($0.0 = \text{clean ground}, 1.0 = \text{heavy metallic signature}$).
-2. **Publisher:** `/gripper/status` (`std_msgs/msg/Int8` @ 10 Hz)
-   - Acknowledges current mechanical gripper state (`0`=Neutral, `1`=Open, `2`=Grip, `3`=Moving/Busy).
-3. **Subscriber:** `/gripper/command` (`std_msgs/msg/Int8`)
-   - Commands gripper state change (`1` = Open to acquire, `2` = Grip object, `0` = Neutral).
-4. **Subscriber:** `/beacon/alert` (`std_msgs/msg/Bool`)
-   - Enables/disables buzzer siren and strobe light.
-
----
-
-## 4. FreeRTOS Task Architecture
-
-```
-Task Name           Priority          Period       Function
------------------------------------------------------------------------------------------
-Task_PulseInduction osPriorityHigh     1-2 ms      Fires Pin 1 pulse, ADC DMA sample Pin 2
-Task_GripperControl osPriorityNormal   10 ms       Drives gripper servos / motion states
-Task_MicroROS       osPriorityNormal   5 ms        Runs micro-ROS agent executor & spin
-Task_Alert          osPriorityLow      50 ms       Controls buzzer and LED blinking patterns
-```
-
----
-
-## 5. Implementation Checklist for Dedicated Chat
-
-- [ ] **Task 1:** Remove obsolete cloned mobility files from `STM32_Auxiliary/Core/HAL_Drivers` (clean up Encoders, MDD10A, PID, IMU6500).
-- [ ] **Task 2:** Rewrite `Core/BSP/pi_detector_driver.c` and `pi_detector_driver.h`:
-  - Configure Pin 1 (timer pulse output driving IRF740 gate via buffer).
-  - Configure Pin 2 (ADC1 channel reading TL072/TL071 decay tail).
-  - Implement blanking delay ($15-25\,\mu\text{s}$) and sample integration.
-- [ ] **Task 3:** Implement baseline ground subtraction and calibration function.
-- [ ] **Task 4:** Finalize `Core/BSP/servo_gripper_driver.c` for 50 Hz PWM servo actuation.
-- [ ] **Task 5:** Set up micro-ROS publishers (`/metal_detector/reading`, `/gripper/status`) and subscribers (`/gripper/command`, `/beacon/alert`).
-- [ ] **Task 6:** Implement buzzer and strobe alert drivers.
-- [ ] **Task 7:** Perform hardware bench verification of pulse timing with oscilloscope / logic analyzer.
+Source and syntax-only checks exist. Full image linking, memory fit, CubeMX/CubeIDE compatibility, flashing and physical measurements remain acceptance work. Use the workspace testing guide at `Auto/TestingGuide.md`, and report PASS/FAIL/BLOCKED/NOT RUN rather than inferring hardware readiness from compilation.
