@@ -5,6 +5,7 @@
 
 #include "pi_detector_driver.h"
 #include <string.h>
+#include "cmsis_os.h"
 
 extern TIM_HandleTypeDef htim2;
 extern ADC_HandleTypeDef hadc1;
@@ -19,8 +20,8 @@ static bool s_calibrated = false;
 
 static void delay_us(uint32_t us)
 {
-    uint32_t start = __HAL_TIM_GET_COUNTER(&htim2);
-    while ((uint32_t)(__HAL_TIM_GET_COUNTER(&htim2) - start) < us)
+    uint16_t start = (uint16_t)__HAL_TIM_GET_COUNTER(&htim2);
+    while ((uint16_t)(__HAL_TIM_GET_COUNTER(&htim2) - start) < us)
     {
         /* Busy wait on 1 MHz hardware counter */
     }
@@ -35,13 +36,16 @@ bool PI_Detector_Init(void)
     GPIO_InitStruct.Pin = AUX_DETECTOR_PULSE_PIN;
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     HAL_GPIO_Init(AUX_DETECTOR_PULSE_PORT, &GPIO_InitStruct);
 
     HAL_GPIO_WritePin(AUX_DETECTOR_PULSE_PORT, AUX_DETECTOR_PULSE_PIN, GPIO_PIN_RESET);
 
-    /* 2. Start TIM2 free-running counter (32-bit @ 1 MHz) if not started */
-    HAL_TIM_Base_Start(&htim2);
+    /* 2. Start TIM2 free-running counter (16-bit @ 1 MHz) if not started */
+    if (HAL_TIM_Base_Start(&htim2)!=HAL_OK) return false;
+    /* Enable ADC outside the IRQ-masked timing section. Keep it enabled. */
+    if (HAL_ADC_Start(&hadc1)!=HAL_OK || HAL_ADC_PollForConversion(&hadc1,1)!=HAL_OK) return false;
+    (void)HAL_ADC_GetValue(&hadc1);
 
     /* 3. Reset reading structures and filter state */
     memset(&s_latest_reading, 0, sizeof(s_latest_reading));
@@ -63,6 +67,7 @@ bool PI_Detector_TriggerPulseAndSample(void)
     }
 
     /* Critical timing section for microsecond precision */
+    uint32_t saved_irq = __get_PRIMASK();
     __disable_irq();
 
     /* 1. Fire Gate Excitation Pulse (70 us) */
@@ -75,19 +80,21 @@ bool PI_Detector_TriggerPulseAndSample(void)
     /* 3. Hardware Blanking Interval (20 us) to bypass flyback spike */
     delay_us(AUX_DETECTOR_BLANKING_US);
 
-    /* 4. Rapid 8x ADC1 Oversampling on PA1 */
+    /* Bounded hardware timeout: HAL tick cannot advance while IRQs are masked. */
     uint32_t adc_sum = 0;
-    for (uint8_t i = 0; i < AUX_DETECTOR_OVERSAMPLES; i++)
-    {
-        HAL_ADC_Start(&hadc1);
-        if (HAL_ADC_PollForConversion(&hadc1, 1) == HAL_OK)
-        {
-            adc_sum += HAL_ADC_GetValue(&hadc1);
+    bool valid = true;
+    for (uint8_t i=0; i<AUX_DETECTOR_OVERSAMPLES; ++i) {
+        __HAL_ADC_CLEAR_FLAG(&hadc1,ADC_FLAG_EOC);
+        SET_BIT(hadc1.Instance->CR2,ADC_CR2_SWSTART | ADC_CR2_EXTTRIG);
+        uint16_t start=(uint16_t)__HAL_TIM_GET_COUNTER(&htim2);
+        while (!__HAL_ADC_GET_FLAG(&hadc1,ADC_FLAG_EOC)) {
+            if ((uint16_t)(__HAL_TIM_GET_COUNTER(&htim2)-start)>=20U) { valid=false; break; }
         }
-        HAL_ADC_Stop(&hadc1);
+        if (valid) adc_sum += HAL_ADC_GetValue(&hadc1);
+        if (!valid) break;
     }
-
-    __enable_irq();
+    __set_PRIMASK(saved_irq);
+    if (!valid) return false;
 
     uint16_t sample_avg = (uint16_t)(adc_sum / AUX_DETECTOR_OVERSAMPLES);
 
@@ -161,7 +168,7 @@ void PI_Detector_CalibrateGroundBaseline(uint16_t samples)
             sum += s_latest_reading.adc_raw_sample;
             count++;
         }
-        HAL_Delay(5); /* 5 ms rest between excitation pulses */
+        if (osKernelGetState()==osKernelRunning) osDelay(5); else HAL_Delay(5); /* 5 ms rest between excitation pulses */
     }
 
     if (count > 0)

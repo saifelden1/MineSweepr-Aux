@@ -7,7 +7,7 @@
 #include "pi_detector_driver.h"
 #include "status_beacon_driver.h"
 #include "cmsis_os.h"
-#include "stm32f4xx_hal.h"
+#include "stm32f1xx_hal.h"
 #include <string.h>
 
 static detector_reading_t s_safe_reading;
@@ -52,11 +52,11 @@ void StartTaskDetector(void *argument)
     for (;;)
     {
         /* 1. Fire 70 us excitation pulse on PB0, wait 20 us blanking, sample ADC1 PA1 */
-        PI_Detector_TriggerPulseAndSample();
+        bool valid = PI_Detector_TriggerPulseAndSample();
 
         /* 2. Retrieve latest reading */
         detector_reading_t current_sample = {0};
-        if (PI_Detector_GetLatestReading(&current_sample))
+        if (valid && PI_Detector_GetLatestReading(&current_sample))
         {
             if (s_detector_mutex != NULL && osMutexAcquire(s_detector_mutex, 10) == osOK)
             {

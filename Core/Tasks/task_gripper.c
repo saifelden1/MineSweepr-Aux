@@ -9,7 +9,7 @@
 #include "cmsis_os.h"
 #include <string.h>
 
-#define GRIPPER_QUEUE_CAPACITY (8U)
+#define GRIPPER_QUEUE_CAPACITY (1U)
 
 static osMessageQueueId_t s_gripper_queue = NULL;
 static const osMessageQueueAttr_t s_gripper_queue_attr = {
@@ -153,7 +153,7 @@ int8_t Task_Gripper_GetStatus(void)
         case GRIPPER_STATE_CLOSED:
             return 2;
         default:
-            return 0;
+            return -1;
     }
 }
 

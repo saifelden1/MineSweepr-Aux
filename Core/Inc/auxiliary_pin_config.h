@@ -2,8 +2,8 @@
  * @file auxiliary_pin_config.h
  * @brief Centralized Hardware Pin & Peripheral Configuration for STM32_Auxiliary ECU.
  *
- * Microcontroller: STM32F411CEU6 BlackPill (ARM Cortex-M4F @ 96 MHz)
- * System Clock: 96 MHz via 25 MHz HSE PLL (or 16 MHz HSI PLL fallback)
+ * Microcontroller: STM32F103C8T6 Blue Pill (ARM Cortex-M3 @ 72 MHz)
+ * System Clock: 72 MHz via 8 MHz HSE PLL
  *
  * Centralizes all pin numbers, GPIO ports, timer channels, and ADC channels.
  * Modifying definitions in this header remaps hardware peripherals without
@@ -13,7 +13,7 @@
 #ifndef AUXILIARY_PIN_CONFIG_H
 #define AUXILIARY_PIN_CONFIG_H
 
-#include "stm32f4xx_hal.h"
+#include "stm32f1xx_hal.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,7 +45,7 @@ extern "C" {
 #define AUX_DETECTOR_DEFAULT_THRESH_ADC (300U)  /**< ADC delta threshold to flag mine detection */
 
 /* ========================================================================= */
-/* 2. THREE-CHANNEL SERVO PWM CONFIGURATION (TIM4 CH1, CH2, CH3)            */
+/* 2. SINGLE-CHANNEL SERVO PWM CONFIGURATION (TIM4 CH1)            */
 /* ========================================================================= */
 /** Servo Timer Base */
 #define AUX_GRIPPER_TIMER_INSTANCE      TIM4
@@ -54,7 +54,6 @@ extern "C" {
 /** Servo 1 PWM (Channel 1: PB6, TIM4_CH1) */
 #define AUX_GRIPPER_PWM1_PORT           GPIOB
 #define AUX_GRIPPER_PWM1_PIN            GPIO_PIN_6
-#define AUX_GRIPPER_PWM1_AF             GPIO_AF2_TIM4
 #define AUX_GRIPPER_PWM1_CLK_ENABLE()   __HAL_RCC_GPIOB_CLK_ENABLE()
 #define AUX_GRIPPER_PWM1_CHANNEL        TIM_CHANNEL_1
 
@@ -62,29 +61,9 @@ extern "C" {
 #define AUX_SERVO1_PIN                  AUX_GRIPPER_PWM1_PIN
 #define AUX_SERVO1_CHANNEL              AUX_GRIPPER_PWM1_CHANNEL
 
-/** Servo 2 PWM (Channel 2: PB7, TIM4_CH2) */
-#define AUX_GRIPPER_PWM2_PORT           GPIOB
-#define AUX_GRIPPER_PWM2_PIN            GPIO_PIN_7
-#define AUX_GRIPPER_PWM2_AF             GPIO_AF2_TIM4
-#define AUX_GRIPPER_PWM2_CHANNEL        TIM_CHANNEL_2
-
-#define AUX_SERVO2_PORT                 AUX_GRIPPER_PWM2_PORT
-#define AUX_SERVO2_PIN                  AUX_GRIPPER_PWM2_PIN
-#define AUX_SERVO2_CHANNEL              AUX_GRIPPER_PWM2_CHANNEL
-
-/** Servo 3 PWM (Channel 3: PB8, TIM4_CH3) */
-#define AUX_GRIPPER_PWM3_PORT           GPIOB
-#define AUX_GRIPPER_PWM3_PIN            GPIO_PIN_8
-#define AUX_GRIPPER_PWM3_AF             GPIO_AF2_TIM4
-#define AUX_GRIPPER_PWM3_CHANNEL        TIM_CHANNEL_3
-
-#define AUX_SERVO3_PORT                 AUX_GRIPPER_PWM3_PORT
-#define AUX_SERVO3_PIN                  AUX_GRIPPER_PWM3_PIN
-#define AUX_SERVO3_CHANNEL              AUX_GRIPPER_PWM3_CHANNEL
-
 /** 50 Hz RC Servo Timing (1 MHz timer clock: 1 us / tick) */
 #define AUX_GRIPPER_PWM_PERIOD_TICKS    (19999U) /**< 20 ms period (50 Hz) ARR = 19999 */
-#define AUX_GRIPPER_PWM_PRESCALER       (95U)    /**< 96 MHz / 96 = 1 MHz tick resolution */
+#define AUX_GRIPPER_PWM_PRESCALER       (71U)    /**< 72 MHz / 72 = 1 MHz tick resolution */
 
 /** Discrete State Microsecond Setpoints */
 #define AUX_GRIPPER_PULSE_NEUTRAL_US    (1500U)  /**< State 0: Neutral / Travel (1.5 ms) */
@@ -132,7 +111,7 @@ extern "C" {
 #define DEBUG_LED3_OFF()                HAL_GPIO_WritePin(DEBUG_LED3_PORT, DEBUG_LED3_PIN, GPIO_PIN_RESET)
 #define DEBUG_LED3_TOGGLE()             HAL_GPIO_TogglePin(DEBUG_LED3_PORT, DEBUG_LED3_PIN)
 
-/** Diagnostic Heartbeat User LED (PC13 on BlackPill - Active LOW) */
+/** Diagnostic Heartbeat User LED (PC13 on Blue Pill - Active LOW) */
 #define DEBUG_HEARTBEAT_PORT            GPIOC
 #define DEBUG_HEARTBEAT_PIN             GPIO_PIN_13
 #define DEBUG_HEARTBEAT_CLK_ENABLE()    __HAL_RCC_GPIOC_CLK_ENABLE()
@@ -150,6 +129,7 @@ extern "C" {
 
 #define AUX_LED1_PORT                   GPIOB
 #define AUX_LED1_PIN                    GPIO_PIN_13
+#define AUX_LED1_CLK_ENABLE()           DEBUG_LED1_CLK_ENABLE()
 #define AUX_BEACON_STROBE_PORT          GPIOB
 #define AUX_BEACON_STROBE_PIN           GPIO_PIN_13
 #define AUX_BEACON_STROBE_CLK_ENABLE()  DEBUG_LED1_CLK_ENABLE()
@@ -178,12 +158,10 @@ extern "C" {
 #define AUX_MICROROS_UART_INSTANCE      USART1
 #define AUX_MICROROS_UART_TX_PORT       GPIOA
 #define AUX_MICROROS_UART_TX_PIN        GPIO_PIN_9
-#define AUX_MICROROS_UART_TX_AF         GPIO_AF7_USART1
 #define AUX_MICROROS_UART_RX_PORT       GPIOA
 #define AUX_MICROROS_UART_RX_PIN        GPIO_PIN_10
-#define AUX_MICROROS_UART_RX_AF         GPIO_AF7_USART1
 #define AUX_MICROROS_UART_CLK_ENABLE()  __HAL_RCC_USART1_CLK_ENABLE()
-#define AUX_MICROROS_DMA_CLK_ENABLE()   __HAL_RCC_DMA2_CLK_ENABLE()
+#define AUX_MICROROS_DMA_CLK_ENABLE()   __HAL_RCC_DMA1_CLK_ENABLE()
 #define AUX_MICROROS_RX_BUF_SIZE        (2048U)
 
 /* ========================================================================= */
@@ -192,7 +170,7 @@ extern "C" {
 /** Free-running microsecond counter (TIM2, 32-bit @ 1 MHz) */
 #define AUX_TIMEBASE_TIMER_INSTANCE     TIM2
 #define AUX_TIMEBASE_TIM_CLK_ENABLE()   __HAL_RCC_TIM2_CLK_ENABLE()
-#define AUX_TIMEBASE_PRESCALER          (95U)    /**< 96 MHz / 96 = 1 MHz */
+#define AUX_TIMEBASE_PRESCALER          (71U)    /**< 72 MHz / 72 = 1 MHz */
 
 #ifdef __cplusplus
 }

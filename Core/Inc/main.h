@@ -27,7 +27,7 @@ extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32f4xx_hal.h"
+#include "stm32f1xx_hal.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -71,10 +71,6 @@ void Error_Handler(void);
 #define LED3_GPIO_Port GPIOB
 #define Gripper_1_Pin GPIO_PIN_6
 #define Gripper_1_GPIO_Port GPIOB
-#define Gripper_2_Pin GPIO_PIN_7
-#define Gripper_2_GPIO_Port GPIOB
-#define Gripper_3_Pin GPIO_PIN_8
-#define Gripper_3_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

@@ -149,7 +149,7 @@ static void process_received_frame(uint8_t topic_id, const uint8_t *payload, uin
     s_stats.agent_connected = true;
 
     if (topic_id == TOPIC_ID_GRIPPER_COMMAND) {
-        if (len >= sizeof(int8_msg_t)) {
+        if (len == sizeof(int8_msg_t) && payload[0]<=2) {
             int8_msg_t cmd_msg;
             memcpy(&cmd_msg, payload, sizeof(int8_msg_t));
             s_stats.gripper_cmd_received_count++;
@@ -161,7 +161,7 @@ static void process_received_frame(uint8_t topic_id, const uint8_t *payload, uin
             s_stats.framing_error_count++;
         }
     } else if (topic_id == TOPIC_ID_BEACON_ALERT) {
-        if (len >= sizeof(bool_msg_t)) {
+        if (len == sizeof(bool_msg_t) && payload[0]<=1) {
             bool_msg_t alert_msg;
             memcpy(&alert_msg, payload, sizeof(bool_msg_t));
             s_stats.beacon_alert_received_count++;

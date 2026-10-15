@@ -1,3 +1,5 @@
+> **Current target: STM32F103C8T6 Blue Pill, one servo.** See [BLUE_PILL.md](BLUE_PILL.md) for active configuration, builds, wiring and ROS interfaces. The Black Pill instructions below are historical and must not be used to flash the current firmware.
+
 # STM32_Auxiliary ECU: Engineering Documentation & Subsystem Manual
 
 **Microcontroller:** STM32 BlackPill ([STM32F411CEU6](file:///e:/MineSweeper/STM32_Auxiliary/Core/Inc/auxiliary_pin_config.h)) — ARM Cortex-M4F @ 96 MHz  

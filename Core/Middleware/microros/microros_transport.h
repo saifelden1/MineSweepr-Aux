@@ -3,10 +3,10 @@
  * @brief Configurable micro-ROS Serial Transport Layer (UART DMA) for STM32_Auxiliary.
  *
  * Implements high-throughput, non-blocking serial communication for micro-ROS
- * using FreeRTOS CMSIS_V2 synchronization, DMA circular reception on DMA2_Stream2,
- * and DMA normal transmission on DMA2_Stream7.
+ * using FreeRTOS CMSIS_V2 synchronization, DMA circular reception on DMA1_Channel5,
+ * and DMA normal transmission on DMA1_Channel4.
  *
- * Target: STM32F411CEU6 BlackPill (ARM Cortex-M4 @ 96 MHz)
+ * Target: STM32F103C8T6 Blue Pill (ARM Cortex-M3 @ 72 MHz)
  */
 
 #ifndef MICROROS_TRANSPORT_H
@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /* Buffer sizing and timing constants */
-#define MICROROS_RX_DMA_BUFFER_SIZE   (2048U)   /**< 2KB Circular Ring Buffer */
+#define MICROROS_RX_DMA_BUFFER_SIZE   (512U)   /**< 512B Circular Ring Buffer */
 #define MICROROS_RX_BUFFER_SIZE       MICROROS_RX_DMA_BUFFER_SIZE /**< Backwards-compatible alias */
 #define MICROROS_UART_DMA_BUF_SIZE    MICROROS_RX_DMA_BUFFER_SIZE /**< Backwards-compatible alias */
 #define MICROROS_TX_DMA_BUFFER_SIZE   (512U)    /**< 512B Non-blocking TX Stage */
@@ -111,7 +111,7 @@ size_t MicroROS_Transport_Read(uint8_t *buf, size_t len, uint32_t timeout_ms);
 size_t MicroROS_Transport_Available(void);
 
 /* ========================================================================== */
-/* LOW-LEVEL INTERRUPT CALLBACKS (Called from stm32f4xx_it.c)                 */
+/* LOW-LEVEL INTERRUPT CALLBACKS (Called from stm32f1xx_it.c)                 */
 /* ========================================================================== */
 void MicroROS_Transport_OnUartIdle(void);
 void MicroROS_Transport_OnTxCplt(void);

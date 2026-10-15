@@ -10,6 +10,7 @@
 #include "status_beacon_driver.h"
 #include "cmsis_os.h"
 #include <string.h>
+#include "main.h"
 
 static void on_gripper_command_received(int8_t cmd)
 {
@@ -31,8 +32,8 @@ void StartTaskMicroROS(void *argument)
 {
     (void)argument;
 
-    Task_MicroROS_Init();
     MicroROS_Client_Init();
+    Task_MicroROS_Init();
 
     uint32_t detector_tick_cnt = 0;
     uint32_t gripper_tick_cnt = 0;
@@ -47,9 +48,12 @@ void StartTaskMicroROS(void *argument)
         if (++detector_tick_cnt >= MICROROS_DETECTOR_TICKS)
         {
             detector_tick_cnt = 0;
-            float32_msg_t det_msg;
-            det_msg.data = Task_Detector_GetIntensity();
-            MicroROS_Client_PublishDetectorReading(&det_msg);
+            detector_reading_t sample;
+            if (Task_Detector_GetLatestReading(&sample) && sample.sample_id>0 &&
+                HAL_GetTick()-sample.timestamp_ms<250U) {
+                float32_msg_t det_msg = {.data=sample.signal_intensity};
+                MicroROS_Client_PublishDetectorReading(&det_msg);
+            }
         }
 
         /* 3. Publish /gripper/status at 10 Hz (every 100 ms) */

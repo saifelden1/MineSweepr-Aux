@@ -7,7 +7,7 @@
  */
 
 #include "microros_transport.h"
-#include "stm32f4xx_hal.h"
+#include "stm32f1xx_hal.h"
 #include "cmsis_os.h"
 #include <string.h>
 
@@ -67,27 +67,7 @@ bool (MicroROS_Transport_Init)(void)
         s_tx_mutex = osMutexNew(&s_tx_mutex_attr);
     }
 
-    /* Configure and link TX DMA if not already linked by MSP */
-    if (s_huart->hdmatx == NULL && s_hdma_tx != NULL)
-    {
-        __HAL_RCC_DMA2_CLK_ENABLE();
-        s_hdma_tx->Instance = DMA2_Stream7;
-        s_hdma_tx->Init.Channel = DMA_CHANNEL_4;
-        s_hdma_tx->Init.Direction = DMA_MEMORY_TO_PERIPH;
-        s_hdma_tx->Init.PeriphInc = DMA_PINC_DISABLE;
-        s_hdma_tx->Init.MemInc = DMA_MINC_ENABLE;
-        s_hdma_tx->Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
-        s_hdma_tx->Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
-        s_hdma_tx->Init.Mode = DMA_NORMAL;
-        s_hdma_tx->Init.Priority = DMA_PRIORITY_MEDIUM;
-        s_hdma_tx->Init.FIFOMode = DMA_FIFOMODE_DISABLE;
-        HAL_DMA_Init(s_hdma_tx);
-        __HAL_LINKDMA(s_huart, hdmatx, *s_hdma_tx);
-
-        HAL_NVIC_SetPriority(DMA2_Stream7_IRQn, 5, 0);
-        HAL_NVIC_EnableIRQ(DMA2_Stream7_IRQn);
-    }
-
+    /* USART1 DMA1 Channel4/5 are configured by the F1 MSP. */
     return MicroROS_Transport_Open();
 }
 
