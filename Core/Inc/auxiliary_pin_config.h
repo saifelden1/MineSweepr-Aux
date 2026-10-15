@@ -45,7 +45,7 @@ extern "C" {
 #define AUX_DETECTOR_DEFAULT_THRESH_ADC (300U)  /**< ADC delta threshold to flag mine detection */
 
 /* ========================================================================= */
-/* 2. SINGLE-CHANNEL SERVO PWM CONFIGURATION (TIM4 CH1)            */
+/* 2. DUAL-CHANNEL SYNCHRONIZED SERVO CONFIGURATION (TIM4 CH1 & CH2)        */
 /* ========================================================================= */
 /** Servo Timer Base */
 #define AUX_GRIPPER_TIMER_INSTANCE      TIM4
@@ -57,9 +57,19 @@ extern "C" {
 #define AUX_GRIPPER_PWM1_CLK_ENABLE()   __HAL_RCC_GPIOB_CLK_ENABLE()
 #define AUX_GRIPPER_PWM1_CHANNEL        TIM_CHANNEL_1
 
+/** Servo 2 PWM (Channel 2: PB7, TIM4_CH2 - moves in unison with Servo 1) */
+#define AUX_GRIPPER_PWM2_PORT           GPIOB
+#define AUX_GRIPPER_PWM2_PIN            GPIO_PIN_7
+#define AUX_GRIPPER_PWM2_CLK_ENABLE()   __HAL_RCC_GPIOB_CLK_ENABLE()
+#define AUX_GRIPPER_PWM2_CHANNEL        TIM_CHANNEL_2
+
 #define AUX_SERVO1_PORT                 AUX_GRIPPER_PWM1_PORT
 #define AUX_SERVO1_PIN                  AUX_GRIPPER_PWM1_PIN
 #define AUX_SERVO1_CHANNEL              AUX_GRIPPER_PWM1_CHANNEL
+
+#define AUX_SERVO2_PORT                 AUX_GRIPPER_PWM2_PORT
+#define AUX_SERVO2_PIN                  AUX_GRIPPER_PWM2_PIN
+#define AUX_SERVO2_CHANNEL              AUX_GRIPPER_PWM2_CHANNEL
 
 /** 50 Hz RC Servo Timing (1 MHz timer clock: 1 us / tick) */
 #define AUX_GRIPPER_PWM_PERIOD_TICKS    (19999U) /**< 20 ms period (50 Hz) ARR = 19999 */

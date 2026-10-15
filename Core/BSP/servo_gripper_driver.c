@@ -13,16 +13,18 @@ static bool s_initialized = false;
 
 static void set_hardware_pwm(uint16_t pulse_us)
 {
-    /* The only payload servo is TIM4 CH1, PB6. */
+    /* Two servos on TIM4 CH1 (PB6) and CH2 (PB7) behaving synchronously as one */
     __HAL_TIM_SET_COMPARE(&htim4, AUX_GRIPPER_PWM1_CHANNEL, pulse_us);
+    __HAL_TIM_SET_COMPARE(&htim4, AUX_GRIPPER_PWM2_CHANNEL, pulse_us);
     s_current_pulse_us = pulse_us;
 }
 
 bool Servo_Gripper_Init(void)
 {
-    /* Initialize compare before enabling the single servo output. */
+    /* Initialize compare before enabling the dual servo outputs. */
     set_hardware_pwm(SERVO_PULSE_NEUTRAL_US);
-    if (HAL_TIM_PWM_Start(&htim4, AUX_GRIPPER_PWM1_CHANNEL)!=HAL_OK) return false;
+    if (HAL_TIM_PWM_Start(&htim4, AUX_GRIPPER_PWM1_CHANNEL) != HAL_OK) return false;
+    if (HAL_TIM_PWM_Start(&htim4, AUX_GRIPPER_PWM2_CHANNEL) != HAL_OK) return false;
 
     /* Default to Neutral position (1500 us, State 0) */
     set_hardware_pwm(SERVO_PULSE_NEUTRAL_US);

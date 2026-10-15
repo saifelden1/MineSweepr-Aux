@@ -127,7 +127,7 @@ bool Task_Gripper_SendCommand(int32_t cmd)
         msg.type = GRIPPER_CMD_TYPE_PRESET_GRIP;
         msg.pulse_us = SERVO_PULSE_GRIP_US;
     }
-    else if (cmd >= SERVO_PULSE_MIN_US && cmd <= SERVO_PULSE_MAX_US)
+    else if (cmd >= (int32_t)SERVO_PULSE_MIN_US && cmd <= (int32_t)SERVO_PULSE_MAX_US)
     {
         msg.type = GRIPPER_CMD_TYPE_CUSTOM_PULSE;
         msg.pulse_us = (uint16_t)cmd;
