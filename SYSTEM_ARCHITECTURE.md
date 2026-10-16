@@ -1,6 +1,6 @@
 # Auxiliary ECU architecture
 
-Current target: **STM32F103C8T6 Blue Pill**, two synchronized servos, custom framed UART to the Pi. The earlier F411/three-servo guides are obsolete. See [requirements](SYSTEM_REQUIREMENTS.md) and the workspace testing guide at `Auto/TestingGuide.md`.
+Current target: **STM32F103C8T6 Blue Pill**, two synchronized servos, one PB12 local-detection relay, custom framed UART to the Pi. The earlier F411/three-servo/separate-indicator guides are obsolete. See [requirements](SYSTEM_REQUIREMENTS.md) and the [complete combined commissioning runbook](https://github.com/badawyengineer/Minesweeper/blob/docs/manual-deployment-batches/HARDWARE_COMMISSIONING.md).
 
 ## Responsibilities and data flow
 
@@ -38,6 +38,14 @@ Only PB12 controls the alarm relay module. No external status LEDs or buzzers ar
 Connected wiring: PB0 → detector gate-driver input; PA1 ← protected 0–3.3 V detector output; PB6/PB7 → servo 1/2 signal; PB12 → relay IN; PA9 TX → separate USB–UART RXD; PA10 RX ← adapter TXD; common GND. The adapter plugs into Pi USB (no Pi GPIO header pins for Aux). Supply the board with regulated 5 V at 5V/GND, and power servos separately with common ground. PA13/PA14 connect to ST-Link SWDIO/SWCLK for programming.
 
 PB7 is the second servo output; PB8 is not a servo output. Both channels receive the same pulse width. Mirrored mechanical mounting may require independent calibration before loading the mechanism. Servo neutral/open/close presets default to 1500/1000/2000 µs; confirm travel limits against the actual mechanism before powered acceptance. Supply servo power separately from logic as appropriate, retain common ground, and confirm the detector analog input stays within the ADC range.
+
+## Physical commissioning order
+
+1. Keep servo/alarm-load power isolated, identify the F103 board and current `build-relay` image, then connect logic power, conditioned detector input and a separate 3.3 V USB–UART adapter. Start with the coil clear of metal for baseline calibration.
+2. Use Pi `payload_serial_bridge` at 921600 baud; confirm real heartbeat, detector reading and commanded gripper status. Do not start a micro-ROS agent on this link or treat an open UART as Pi health.
+3. Measure PB12 inactive at startup before adding relay load power. Then check target → siren/red indicator ON and valid clear → OFF. Stop only the Pi payload bridge while retaining Aux/detector power and repeat; remote `/beacon/alert` cannot operate this relay. Failed acquisition may retain the last state.
+4. With unloaded linkage and correct external servo supply, check Neutral/Open/Close on both PB6/PB7 outputs together. Validate travel/mirrored mounting before loading the mechanism. Check disabled GUI controls after stale/disconnected Aux and no replay on reconnect.
+5. Record actual pin levels, PWM/travel, relay response, adapter path and source/flashed image separately. All physical acceptance remains NOT RUN until performed; this documentation update did not build, flash or exercise hardware.
 
 ## Firmware organization and resources
 

@@ -1,6 +1,6 @@
 # Auxiliary ECU requirements
 
-Baseline: 15 October 2026. Target **STM32F103C8T6 Blue Pill, two servos moving together**. See [architecture](SYSTEM_ARCHITECTURE.md) for wiring, timing, protocol and build commands. This replaces the old F411/micro-ROS requirements.
+Baseline: **17 October 2026**. Target **STM32F103C8T6 Blue Pill, two servos moving together, single PB12 active-HIGH detection relay**. See [architecture](SYSTEM_ARCHITECTURE.md) for wiring, timing, protocol, physical commissioning order and build commands. This replaces the old F411/micro-ROS/separate-indicator requirements. The combined runbook is linked there; physical checks are not implied by publication.
 
 ## Board, memory and timing
 
