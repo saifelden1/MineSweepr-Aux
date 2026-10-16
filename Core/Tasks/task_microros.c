@@ -7,7 +7,6 @@
 #include "microros_client.h"
 #include "task_detector.h"
 #include "task_gripper.h"
-#include "status_beacon_driver.h"
 #include "cmsis_os.h"
 #include <string.h>
 #include "main.h"
@@ -17,15 +16,11 @@ static void on_gripper_command_received(int8_t cmd)
     Task_Gripper_SendCommand((int32_t)cmd);
 }
 
-static void on_beacon_alert_received(bool alert)
-{
-    Status_Beacon_SetRemoteAlert(alert);
-}
-
 void Task_MicroROS_Init(void)
 {
     MicroROS_Client_RegisterGripperCmdCallback(on_gripper_command_received);
-    MicroROS_Client_RegisterBeaconAlertCallback(on_beacon_alert_received);
+    /* Remote beacon frames remain parseable but cannot control the local relay. */
+    MicroROS_Client_RegisterBeaconAlertCallback(NULL);
 }
 
 void StartTaskMicroROS(void *argument)
@@ -73,8 +68,6 @@ void StartTaskMicroROS(void *argument)
             hb_msg.data = true;
             MicroROS_Client_PublishHeartbeat(&hb_msg);
 
-            /* Update LED 3 (System Ready & ROS Linked) */
-            Status_Beacon_SetSystemReady(MicroROS_Client_IsConnected());
         }
 
         /* 5. 10 ms base loop period */

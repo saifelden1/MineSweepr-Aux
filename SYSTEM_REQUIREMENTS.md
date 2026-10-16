@@ -19,7 +19,7 @@ Baseline: 15 October 2026. Target **STM32F103C8T6 Blue Pill, two servos moving t
 | AUX-06 | Commands 0/1/2 select neutral/open/close on both servos together. Default pulses are 1500/1000/2000 µs and must match measured mechanical limits. | GUI command → valid serial frame → scoped PWM → physical servo response. |
 | AUX-07 | `/gripper/status` reports commanded state; unknown/error is −1. Do not infer closed-loop position or grasp. | Check telemetry during preset and invalid/unknown states. |
 | AUX-08 | Metal readings come from actual recent ADC samples, normalize to 0–1, and are not published as fresh when acquisition fails. | Target/clear-ground observations plus missing/failed acquisition scenarios. |
-| AUX-09 | Local detection controls indicators; remote beacon alert is supported. Detection does not automatically open/close the servo. | Observe indicators and absence of unintended servo movement. |
+| AUX-09 | Local detection alone controls the PB12 active-HIGH relay for siren + red indicator. Relay starts OFF, turns ON while metal is detected and OFF on a valid clear reading. No status LED/buzzer/heartbeat outputs or remote relay override. Detection does not automatically open/close the servo. | Observe PB12 at startup, detection and clear; verify remote beacon frames cannot switch it and servo commands remain independent. |
 | AUX-10 | Invalid command values, wrong lengths or corrupt CRC frames cannot change servo/alarm state. | Framing, split-input, corruption and value-boundary checks. |
 
 ## Pi / ROS integration
@@ -35,7 +35,7 @@ Baseline: 15 October 2026. Target **STM32F103C8T6 Blue Pill, two servos moving t
 
 No independent servo commands, third servo, mobility motor control, IMU/GPS, XRCE client, object-grasp feedback or autonomous pickup is required in this ECU baseline. Its `microros_*` filenames are legacy names for custom serial code.
 
-CMake compile/link passed on 16 October 2026: 25,640 bytes flash / 65,536 available, and 16,904 bytes static RAM / 20,480 available. Runtime stack high-water marks, CubeMX/CubeIDE compatibility, flashing and physical measurements remain acceptance work. Use the workspace testing guide at `Auto/TestingGuide.md`, and report PASS/FAIL/BLOCKED/NOT RUN rather than inferring hardware readiness from compilation.
+CMake compile/link passed on 16 October 2026: 25,064 bytes flash / 65,536 available, and 16,880 bytes linker-reported RAM / 20,480 available. Runtime stack high-water marks, CubeMX/CubeIDE compatibility, flashing and physical measurements remain acceptance work. Use the workspace testing guide at `Auto/TestingGuide.md`, and report PASS/FAIL/BLOCKED/NOT RUN rather than inferring hardware readiness from compilation.
 
 ## Deployment handoff — 16 October 2026
 

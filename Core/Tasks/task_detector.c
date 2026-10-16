@@ -16,8 +16,6 @@ static const osMutexAttr_t s_detector_mutex_attr = {
     .name = "DetectorMutex"
 };
 
-static uint32_t s_heartbeat_counter = 0;
-
 void Task_Detector_Init(void)
 {
     if (s_detector_mutex == NULL)
@@ -26,16 +24,6 @@ void Task_Detector_Init(void)
     }
 
     memset(&s_safe_reading, 0, sizeof(s_safe_reading));
-
-    /* Initialize diagnostic heartbeat pin PC13 */
-    AUX_HEARTBEAT_CLK_ENABLE();
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
-    GPIO_InitStruct.Pin = AUX_HEARTBEAT_PIN;
-    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(AUX_HEARTBEAT_PORT, &GPIO_InitStruct);
-    HAL_GPIO_WritePin(AUX_HEARTBEAT_PORT, AUX_HEARTBEAT_PIN, GPIO_PIN_RESET);
 }
 
 void StartTaskDetector(void *argument)
@@ -68,17 +56,7 @@ void StartTaskDetector(void *argument)
             Status_Beacon_SetMineAlert(current_sample.target_detected);
         }
 
-        /* 4. Update Status Beacon strobe timing */
-        Status_Beacon_Update(DETECTOR_TASK_PERIOD_MS);
-
-        /* 5. Heartbeat indicator on PC13 every ~1 second (every 20 cycles) */
-        if (++s_heartbeat_counter >= 20)
-        {
-            s_heartbeat_counter = 0;
-            HAL_GPIO_TogglePin(AUX_HEARTBEAT_PORT, AUX_HEARTBEAT_PIN);
-        }
-
-        /* 6. Enforce deterministic 20 Hz (50 ms) Rate-Monotonic timing */
+        /* 4. Enforce deterministic 20 Hz (50 ms) Rate-Monotonic timing */
         last_wake_tick += DETECTOR_TASK_PERIOD_MS;
         uint32_t now = osKernelGetTickCount();
         if (now < last_wake_tick)
