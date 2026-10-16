@@ -1,6 +1,6 @@
 # Auxiliary ECU requirements
 
-Baseline: 15 October 2026. Target **STM32F103C8T6 Blue Pill, exactly one servo**. See [architecture](SYSTEM_ARCHITECTURE.md) for wiring, timing, protocol and build commands. This replaces the old F411/micro-ROS requirements.
+Baseline: 15 October 2026. Target **STM32F103C8T6 Blue Pill, two servos moving together**. See [architecture](SYSTEM_ARCHITECTURE.md) for wiring, timing, protocol and build commands. This replaces the old F411/micro-ROS requirements.
 
 ## Board, memory and timing
 
@@ -9,14 +9,14 @@ Baseline: 15 October 2026. Target **STM32F103C8T6 Blue Pill, exactly one servo**
 | AUX-01 | Active CubeMX, CubeIDE and CMake targets use F103C8T6, Cortex-M3 soft-float, F1 HAL and the CM3 RTOS port. | Confirm chip marking and compile both toolchain paths without active F4 sources. |
 | AUX-02 | Firmware fits 64 KB flash / 20 KB SRAM, including RTOS heap, static objects and stacks. | Link map, memory report and sustained-run stack high-water marks. |
 | AUX-03 | 8 MHz HSE produces 72 MHz system clock; TIM3 supplies HAL time and SysTick supplies RTOS time. | Inspect configuration and measured task/peripheral timing. |
-| AUX-04 | Exactly one servo output exists: PB6 / TIM4 CH1, 50 Hz, 1 µs resolution. PB7/PB8 do not emit servo PWM. | Scope all three pins and inspect configuration. |
+| AUX-04 | Two synchronized servo outputs exist: PB6 / TIM4 CH1 and PB7 / TIM4 CH2, 50 Hz, 1 µs resolution. PB8 does not emit servo PWM. | Scope both servo pins and PB8 and inspect configuration. |
 | AUX-05 | Detector pulse, blanking and ADC acquisition use initialized timers and bounded conversion waits, including counter wrap. | Scope 70 µs pulse / 20 µs blanking, acquisition sequence and failure/rollover behavior. |
 
 ## Payload behavior
 
 | ID | Requirement | Acceptance evidence |
 |---|---|---|
-| AUX-06 | Commands 0/1/2 select neutral/open/close on the one servo. Default pulses are 1500/1000/2000 µs and must match measured mechanical limits. | GUI command → valid serial frame → scoped PWM → physical servo response. |
+| AUX-06 | Commands 0/1/2 select neutral/open/close on both servos together. Default pulses are 1500/1000/2000 µs and must match measured mechanical limits. | GUI command → valid serial frame → scoped PWM → physical servo response. |
 | AUX-07 | `/gripper/status` reports commanded state; unknown/error is −1. Do not infer closed-loop position or grasp. | Check telemetry during preset and invalid/unknown states. |
 | AUX-08 | Metal readings come from actual recent ADC samples, normalize to 0–1, and are not published as fresh when acquisition fails. | Target/clear-ground observations plus missing/failed acquisition scenarios. |
 | AUX-09 | Local detection controls indicators; remote beacon alert is supported. Detection does not automatically open/close the servo. | Observe indicators and absence of unintended servo movement. |
@@ -33,6 +33,10 @@ Baseline: 15 October 2026. Target **STM32F103C8T6 Blue Pill, exactly one servo**
 
 ## Scope and readiness
 
-No second/third servo, mobility motor control, IMU/GPS, XRCE client, object-grasp feedback or autonomous pickup is required in this ECU baseline. Its `microros_*` filenames are legacy names for custom serial code.
+No independent servo commands, third servo, mobility motor control, IMU/GPS, XRCE client, object-grasp feedback or autonomous pickup is required in this ECU baseline. Its `microros_*` filenames are legacy names for custom serial code.
 
-Source and syntax-only checks exist. Full image linking, memory fit, CubeMX/CubeIDE compatibility, flashing and physical measurements remain acceptance work. Use the workspace testing guide at `Auto/TestingGuide.md`, and report PASS/FAIL/BLOCKED/NOT RUN rather than inferring hardware readiness from compilation.
+CMake compile/link passed on 16 October 2026: 25,640 bytes flash / 65,536 available, and 16,904 bytes static RAM / 20,480 available. Runtime stack high-water marks, CubeMX/CubeIDE compatibility, flashing and physical measurements remain acceptance work. Use the workspace testing guide at `Auto/TestingGuide.md`, and report PASS/FAIL/BLOCKED/NOT RUN rather than inferring hardware readiness from compilation.
+
+## Deployment handoff — 16 October 2026
+
+The Blue Pill is not yet available to the operator. Paired PWM outputs are implemented in source, but flashing, servo travel/current checks and detector calibration remain NOT RUN on hardware. Laptop GUI support and the optional Pi bridge are tracked in `Auto/Auto_ws/DEPLOYMENT.md` in the sibling workspace. Use a separate 3.3 V USB–UART adapter; Mobility already occupies the Pi GPIO UART. A common ground and external regulated servo supply are required. Do not run a micro-ROS agent on this custom-protocol Aux link.

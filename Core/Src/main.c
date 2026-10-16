@@ -1,4 +1,4 @@
-/* STM32F103C8T6 Blue Pill: one servo, detector and framed UART payload link. */
+/* STM32F103C8T6 Blue Pill: paired servos, detector and framed UART payload link. */
 #include "main.h"
 #include "cmsis_os.h"
 #include "adc.h"
